@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classic Radar Spin · Pro</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+}
+
+body{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(145deg,#ece9e0,#d6d2c4);
+  font-family:system-ui;
+}
+
+.spin-card{
+  width:100%;
+  max-width:520px;
+  background:#fff8eb;
+  border-radius:40px;
+  padding:20px;
+  text-align:center;
+  border:1px solid #e0d2b0;
+}
+
+h1{
+  font-size:22px;
+  color:#9b6e2c;
+}
+
+.sub{
+  font-size:12px;
+  color:#7a6a4e;
+  margin-bottom:10px;
+}
+
+.radar-wheel{
+  width:260px;
+  height:260px;
+  margin:20px auto;
+  border-radius:50%;
+  background:#faf7ef;
+  border:2px solid #e9dbbc;
+  position:relative;
+  cursor:pointer;
+}
+
+canvas{
+  width:100%;
+  height:100%;
+}
+
+.radar-beam{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:50%;
+  height:2px;
+  background:#dba437;
+  transform-origin:left center;
+}
+
+.pointer{
+  position:absolute;
+  top:-20px;
+  left:50%;
+  transform:translateX(-50%);
+  border-left:18px solid transparent;
+  border-right:18px solid transparent;
+  border-top:40px solid #dba437;
+}
+
+.result{
+  margin-top:15px;
+  padding:10px;
+  border-radius:20px;
+  background:#fcf5e8;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="spin-card">
+  <h1>🎡 CLASSIC RADAR</h1>
+  <div class="sub">Tap To Spin</div>
+
+  <div class="radar-wheel" id="wheel">
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="radar-beam" id="beam"></div>
+    <div class="pointer"></div>
+  </div>
+
+  <div class="result" id="result">
+    Tap to win iPhone 17 Pro Max 🎁
+  </div>
+</div>
+
+<script>
+/* =========================
+   CONFIG
+========================= */
+const CONFIG = {
+  spinDuration: 3200,
+  whatsapp: "918696854135"
+};
+
+/* =========================
+   REWARDS
+========================= */
+const REWARDS = [
+  {name:"iPhone 17 Pro Max",type:"jackpot"},
+  {name:"BMW M5",type:"car"},
+  {name:"TV",type:"other"},
+  {name:"Fridge",type:"other"},
+  {name:"Nothing",type:"lose"},
+  {name:"₹500",type:"cash"},
+  {name:"₹10,000",type:"cash"}
+];
+
+const SEG = REWARDS.length;
+const ANG = Math.PI*2/SEG;
+
+/* =========================
+   STATE
+========================= */
+let rotation = Math.random()*Math.PI*2;
+let spinning=false;
+let firstSpin=true;
+let locked=false;
+
+/* =========================
+   CANVAS
+========================= */
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+/* =========================
+   DRAW
+========================= */
+function draw(){
+  const cx=250,cy=250,r=200;
+  ctx.clearRect(0,0,500,500);
+
+  for(let i=0;i<SEG;i++){
+    let start=i*ANG+rotation;
+    let end=start+ANG;
+
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,end);
+    ctx.fillStyle=i%2?"#c2a15b":"#e6d5b8";
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(start+ANG/2);
+    ctx.fillStyle="#000";
+    ctx.font="12px sans-serif";
+    ctx.fillText(REWARDS[i].name,100,5);
+    ctx.restore();
+  }
+}
+
+/* =========================
+   LOGIC
+========================= */
+function getTarget(){
+  if(firstSpin){
+    firstSpin=false;
+
+    if(Math.random()<0.8){
+      return 0; // iPhone
+    }else{
+      return Math.floor(Math.random()*6)+1;
+    }
+  }
+  return Math.floor(Math.random()*SEG);
+}
+
+/* =========================
+   SPIN
+========================= */
+function spin(){
+  if(spinning || locked) return;
+
+  spinning=true;
+  let target=getTarget();
+
+  // Pointer is fixed at top (-PI/2)
+  const pointerAngle = -Math.PI / 2;
+  
+  // Calculate segment middle angle
+  const segMid = target * ANG + ANG / 2;
+  
+  // Target rotation: pointerAngle - segMid
+  // This ensures segmentMid aligns with pointer
+  let targetRotation = pointerAngle - segMid;
+  
+  // Normalize to [0, 2*PI)
+  targetRotation = targetRotation % (Math.PI * 2);
+  if (targetRotation < 0) targetRotation += Math.PI * 2;
+  
+  // Calculate current rotation normalized
+  let currentNormalized = rotation % (Math.PI * 2);
+  if (currentNormalized < 0) currentNormalized += Math.PI * 2;
+  
+  // Calculate delta (how much to rotate from current position)
+  let delta = targetRotation - currentNormalized;
+  
+  // Ensure forward rotation only
+  if (delta < 0) delta += Math.PI * 2;
+  
+  // Add 8-15 full spins for smooth animation
+  const fullSpins = 8 + Math.floor(Math.random() * 8);
+  const totalDelta = delta + fullSpins * Math.PI * 2;
+  
+  const finalRotation = rotation + totalDelta;
+
+  let start=performance.now();
+  let initRot=rotation;
+
+  function animate(t){
+    let p=(t-start)/CONFIG.spinDuration;
+    if(p>1) p=1;
+
+    let ease=1-Math.pow(1-p,3);
+    rotation=initRot + totalDelta * ease;
+
+    draw();
+    beam.style.transform=`rotate(${rotation}rad)`;
+
+    if(p<1){
+      requestAnimationFrame(animate);
+    }else{
+      spinning=false;
+      // Snap to exact final position
+      rotation = finalRotation;
+      draw();
+      beam.style.transform=`rotate(${rotation}rad)`;
+      win(target);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+/* =========================
+   WIN HANDLER
+========================= */
+function win(i){
+  let prize=REWARDS[i];
+  let result=document.getElementById("result");
+
+  if(prize.type==="jackpot"){
+    locked=true;
+    result.innerHTML="🏆 iPhone Won! Redirecting...";
+    setTimeout(()=>{
+      window.location="/i17promaxwin";
+    },500);
+    return;
+  }
+
+  result.innerHTML="🎁 You won "+prize.name;
+
+  // whatsapp
+  let msg=encodeURIComponent("I won "+prize.name+" 🎉");
+  window.open(`https://wa.me/${CONFIG.whatsapp}?text=${msg}`,'_blank');
+}
+
+/* =========================
+   EVENTS
+========================= */
+document.getElementById("wheel").onclick=spin;
+
+/* =========================
+   INIT
+========================= */
+draw();
+</script>
+
+</body>
+</html>
